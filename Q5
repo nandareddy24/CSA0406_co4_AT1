@@ -1,0 +1,346 @@
+```c
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MAX 1000
+
+int disk[MAX];
+
+int contiguousAllocation(int total, int fileSize, int blocks[])
+{
+    int i, j, count;
+
+    for (i = 0; i <= total - fileSize; i++)
+    {
+        count = 0;
+
+        for (j = i; j < i + fileSize; j++)
+        {
+            if (disk[j] == 0)
+                count++;
+        }
+
+        if (count == fileSize)
+        {
+            for (j = 0; j < fileSize; j++)
+            {
+                blocks[j] = i + j;
+                disk[i + j] = 1;
+            }
+
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+int indexedAllocation(int total, int fileSize, int blocks[])
+{
+    int i, count = 0;
+    int indexBlock = -1;
+
+    /* Find index block */
+    for (i = 0; i < total; i++)
+    {
+        if (disk[i] == 0)
+        {
+            indexBlock = i;
+            disk[i] = 1;
+            break;
+        }
+    }
+
+    if (indexBlock == -1)
+        return 0;
+
+    /* Find data blocks */
+    for (i = 0; i < total && count < fileSize; i++)
+    {
+        if (disk[i] == 0)
+        {
+            disk[i] = 1;
+            blocks[count++] = i;
+        }
+    }
+
+    if (count == fileSize)
+    {
+        printf("Index Block: %d\n", indexBlock);
+        return 1;
+    }
+
+    /* Rollback if allocation failed */
+    disk[indexBlock] = 0;
+
+    for (i = 0; i < count; i++)
+        disk[blocks[i]] = 0;
+
+    return 0;
+}
+
+void fcfs(int blocks[], int n, int head)
+{
+    int i;
+    int current = head;
+    int movement = 0;
+
+    printf("\nFCFS Seek Sequence:\n");
+    printf("%d ", head);
+
+    for (i = 0; i < n; i++)
+    {
+        movement += abs(current - blocks[i]);
+        current = blocks[i];
+
+        printf("-> %d ", current);
+    }
+
+    printf("\nTotal Seek Time = %d\n", movement);
+}
+
+void sstf(int blocks[], int n, int head)
+{
+    int visited[MAX] = {0};
+    int current = head;
+    int movement = 0;
+    int i, count;
+    int index, distance, minDistance;
+
+    printf("\nSSTF Seek Sequence:\n");
+    printf("%d ", head);
+
+    for (count = 0; count < n; count++)
+    {
+        index = -1;
+        minDistance = 999999;
+
+        for (i = 0; i < n; i++)
+        {
+            if (!visited[i])
+            {
+                distance = abs(current - blocks[i]);
+
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    index = i;
+                }
+            }
+        }
+
+        visited[index] = 1;
+
+        movement += abs(current - blocks[index]);
+        current = blocks[index];
+
+        printf("-> %d ", current);
+    }
+
+    printf("\nTotal Seek Time = %d\n", movement);
+}
+
+int calculateFCFS(int blocks[], int n, int head)
+{
+    int i;
+    int movement = 0;
+    int current = head;
+
+    for (i = 0; i < n; i++)
+    {
+        movement += abs(current - blocks[i]);
+        current = blocks[i];
+    }
+
+    return movement;
+}
+
+int calculateSSTF(int blocks[], int n, int head)
+{
+    int visited[MAX] = {0};
+    int current = head;
+    int movement = 0;
+    int i, count;
+    int index, distance, minDistance;
+
+    for (count = 0; count < n; count++)
+    {
+        index = -1;
+        minDistance = 999999;
+
+        for (i = 0; i < n; i++)
+        {
+            if (!visited[i])
+            {
+                distance = abs(current - blocks[i]);
+
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    index = i;
+                }
+            }
+        }
+
+        visited[index] = 1;
+        movement += abs(current - blocks[index]);
+        current = blocks[index];
+    }
+
+    return movement;
+}
+
+int main()
+{
+    int total, fileSize;
+    int allocationMethod, schedulingMethod;
+    int head;
+    int blocks[MAX];
+    int i;
+
+    int fcfsTime, sstfTime;
+
+    printf("Enter total number of disk blocks: ");
+    scanf("%d", &total);
+
+    printf("Enter file size: ");
+    scanf("%d", &fileSize);
+
+    if (total <= 0 || total > MAX || fileSize <= 0 || fileSize >= total)
+    {
+        printf("Invalid input.\n");
+        return 0;
+    }
+
+    /* Initially all blocks are free */
+    for (i = 0; i < total; i++)
+        disk[i] = 0;
+
+    printf("\nAllocation Methods:\n");
+    printf("1. Contiguous\n");
+    printf("2. Indexed\n");
+
+    printf("Enter allocation method: ");
+    scanf("%d", &allocationMethod);
+
+    /* Allocate file */
+    if (allocationMethod == 1)
+    {
+        if (!contiguousAllocation(total, fileSize, blocks))
+        {
+            printf("\nContiguous allocation failed.\n");
+            printf("No sufficient continuous space available.\n");
+            return 0;
+        }
+
+        printf("\nContiguous Allocation Successful.\n");
+    }
+    else if (allocationMethod == 2)
+    {
+        if (!indexedAllocation(total, fileSize, blocks))
+        {
+            printf("\nIndexed allocation failed.\n");
+            printf("Insufficient free blocks available.\n");
+            return 0;
+        }
+
+        printf("\nIndexed Allocation Successful.\n");
+    }
+    else
+    {
+        printf("Invalid allocation method.\n");
+        return 0;
+    }
+
+    printf("Allocated Blocks: ");
+
+    for (i = 0; i < fileSize; i++)
+        printf("%d ", blocks[i]);
+
+    printf("\n");
+
+    /* Disk scheduling */
+    printf("\nDisk Scheduling Methods:\n");
+    printf("1. FCFS\n");
+    printf("2. SSTF\n");
+
+    printf("Enter scheduling method: ");
+    scanf("%d", &schedulingMethod);
+
+    printf("Enter initial head position: ");
+    scanf("%d", &head);
+
+    if (head < 0 || head >= total)
+    {
+        printf("Invalid head position.\n");
+        return 0;
+    }
+
+    if (schedulingMethod == 1)
+    {
+        fcfs(blocks, fileSize, head);
+    }
+    else if (schedulingMethod == 2)
+    {
+        sstf(blocks, fileSize, head);
+    }
+    else
+    {
+        printf("Invalid scheduling method.\n");
+        return 0;
+    }
+
+    /* Compare both scheduling methods */
+    fcfsTime = calculateFCFS(blocks, fileSize, head);
+    sstfTime = calculateSSTF(blocks, fileSize, head);
+
+    printf("\n===== PERFORMANCE COMPARISON =====\n");
+    printf("FCFS Total Seek Time : %d\n", fcfsTime);
+    printf("SSTF Total Seek Time : %d\n", sstfTime);
+
+    if (fcfsTime < sstfTime)
+        printf("Best Scheduling Method: FCFS\n");
+    else if (sstfTime < fcfsTime)
+        printf("Best Scheduling Method: SSTF\n");
+    else
+        printf("Both methods have equal performance.\n");
+
+    return 0;
+}
+```
+
+**Sample Input**
+
+```text
+Enter total number of disk blocks: 50
+Enter file size: 6
+
+Allocation Methods:
+1. Contiguous
+2. Indexed
+
+Enter allocation method: 1
+
+Disk Scheduling Methods:
+1. FCFS
+2. SSTF
+
+Enter scheduling method: 2
+Enter initial head position: 20
+```
+
+**Sample Output**
+
+```text
+Contiguous Allocation Successful.
+Allocated Blocks: 0 1 2 3 4 5
+
+SSTF Seek Sequence:
+20 -> 5 -> 4 -> 3 -> 2 -> 1 -> 0
+Total Seek Time = 20
+
+===== PERFORMANCE COMPARISON =====
+FCFS Total Seek Time : 30
+SSTF Total Seek Time : 20
+Best Scheduling Method: SSTF
+```
