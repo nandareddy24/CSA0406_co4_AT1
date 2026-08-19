@@ -1,0 +1,202 @@
+```c
+#include <stdio.h>
+
+#define MAX 1000
+
+int disk[MAX];
+
+void display(int blocks[], int n)
+{
+    int i;
+    printf("Allocated Blocks: ");
+    for (i = 0; i < n; i++)
+        printf("%d ", blocks[i]);
+    printf("\n");
+}
+
+void contiguous(int total, int fileSize)
+{
+    int i, j, count;
+    int blocks[MAX];
+
+    for (i = 0; i <= total - fileSize; i++)
+    {
+        count = 0;
+
+        for (j = i; j < i + fileSize; j++)
+        {
+            if (disk[j] == 0)
+                count++;
+        }
+
+        if (count == fileSize)
+        {
+            for (j = i; j < i + fileSize; j++)
+            {
+                disk[j] = 1;
+                blocks[j - i] = j;
+            }
+
+            printf("\nContiguous Allocation Successful\n");
+            display(blocks, fileSize);
+            return;
+        }
+    }
+
+    printf("\nContiguous Allocation Failed!\n");
+    printf("Sufficient continuous space is not available.\n");
+}
+
+void linked(int total, int fileSize)
+{
+    int i, count = 0;
+    int blocks[MAX];
+
+    for (i = 0; i < total && count < fileSize; i++)
+    {
+        if (disk[i] == 0)
+        {
+            disk[i] = 1;
+            blocks[count++] = i;
+        }
+    }
+
+    if (count == fileSize)
+    {
+        printf("\nLinked Allocation Successful\n");
+        display(blocks, fileSize);
+    }
+    else
+    {
+        printf("\nLinked Allocation Failed!\n");
+        printf("Insufficient free blocks.\n");
+
+        for (i = 0; i < count; i++)
+            disk[blocks[i]] = 0;
+    }
+}
+
+void indexed(int total, int fileSize)
+{
+    int i, count = 0;
+    int indexBlock = -1;
+    int blocks[MAX];
+
+    /* Find an index block */
+    for (i = 0; i < total; i++)
+    {
+        if (disk[i] == 0)
+        {
+            indexBlock = i;
+            disk[i] = 1;
+            break;
+        }
+    }
+
+    if (indexBlock == -1)
+    {
+        printf("\nIndexed Allocation Failed!\n");
+        printf("No free index block available.\n");
+        return;
+    }
+
+    /* Allocate data blocks */
+    for (i = 0; i < total && count < fileSize; i++)
+    {
+        if (disk[i] == 0)
+        {
+            disk[i] = 1;
+            blocks[count++] = i;
+        }
+    }
+
+    if (count == fileSize)
+    {
+        printf("\nIndexed Allocation Successful\n");
+        printf("Index Block: %d\n", indexBlock);
+        display(blocks, fileSize);
+    }
+    else
+    {
+        printf("\nIndexed Allocation Failed!\n");
+        printf("Insufficient free blocks.\n");
+
+        disk[indexBlock] = 0;
+
+        for (i = 0; i < count; i++)
+            disk[blocks[i]] = 0;
+    }
+}
+
+int main()
+{
+    int total, fileSize, method;
+    int i;
+
+    printf("Enter total number of disk blocks: ");
+    scanf("%d", &total);
+
+    printf("Enter file size (number of blocks): ");
+    scanf("%d", &fileSize);
+
+    if (total > MAX || total <= 0 || fileSize <= 0 || fileSize > total)
+    {
+        printf("Invalid input.\n");
+        return 0;
+    }
+
+    /* Initially all blocks are free */
+    for (i = 0; i < total; i++)
+        disk[i] = 0;
+
+    printf("\nAllocation Methods:\n");
+    printf("1. Contiguous\n");
+    printf("2. Linked\n");
+    printf("3. Indexed\n");
+
+    printf("Enter allocation method: ");
+    scanf("%d", &method);
+
+    switch (method)
+    {
+        case 1:
+            contiguous(total, fileSize);
+            break;
+
+        case 2:
+            linked(total, fileSize);
+            break;
+
+        case 3:
+            indexed(total, fileSize);
+            break;
+
+        default:
+            printf("Invalid allocation method.\n");
+    }
+
+    return 0;
+}
+```
+
+**Sample Input**
+
+```text
+Enter total number of disk blocks: 20
+Enter file size (number of blocks): 5
+Enter allocation method: 1
+```
+
+**Sample Output**
+
+```text
+Contiguous Allocation Successful
+Allocated Blocks: 0 1 2 3 4
+```
+
+If free blocks are fragmented, contiguous allocation can produce:
+
+```text
+Contiguous Allocation Failed!
+Sufficient continuous space is not available.
+```
